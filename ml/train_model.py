@@ -145,7 +145,10 @@ def generate_dataset(n: int) -> pd.DataFrame:
 print("Loading dataset from CSV...")
 
 #  USE YOUR CSV FILE HERE
-df = pd.read_csv(r"C:\Users\shubh\Downloads\scrub_typhus_ai_project\scrub_typhus_project\data\scrub_typhus_20k.csv")
+import os
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_PATH = os.path.join(BASE_DIR, "..", "data", "scrub_typhus_20k.csv")
+df = pd.read_csv(DATA_PATH)
 
 print(f"Dataset loaded. Shape: {df.shape}")
 print(f"Class balance: {df['scrub_typhus'].value_counts().to_dict()}")
