@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>ScrubDx AI – Scrub Typhus Prediction System</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --primary: #1a6b4a;
+      --primary-light: #2d9669;
+      --primary-dark: #0f4530;
+      --accent: #e8a317;
+      --danger: #d63031;
+      --warning: #f39c12;
+      --surface: #ffffff;
+      --bg: #f0f4f1;
+      --bg2: #e4ede8;
+      --text: #1a2e22;
+      --text2: #4a6358;
+      --text3: #7a9488;
+      --border: #c8ddd3;
+      --card-shadow: 0 2px 12px rgba(26,107,74,0.10);
+      --radius: 14px;
+      --nav-h: 64px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* ── NAV ───────────────────────────────── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      height: var(--nav-h); background: var(--primary-dark);
+      display: flex; align-items: center; padding: 0 28px;
+      gap: 20px; box-shadow: 0 2px 16px rgba(0,0,0,0.25);
+    }
+    .nav-logo {
+      font-family: 'Playfair Display', serif; font-size: 1.35rem;
+      color: #fff; font-weight: 700; letter-spacing: -0.3px; flex: 1;
+    }
+    .nav-logo span { color: var(--accent); }
+    .nav-links { display: flex; gap: 6px; }
+    .nav-link {
+      color: rgba(255,255,255,0.75); text-decoration: none; padding: 7px 14px;
+      border-radius: 8px; font-size: 0.88rem; font-weight: 500;
+      transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+    }
+    .nav-link:hover, .nav-link.active {
+      background: rgba(255,255,255,0.15); color: #fff;
+    }
+    .nav-link .material-icons-round { font-size: 17px; }
+
+    /* ── LAYOUT ──────────────────────────── */
+    main { padding-top: calc(var(--nav-h) + 28px); padding-bottom: 40px; }
+    .container { max-width: 1240px; margin: 0 auto; padding: 0 24px; }
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ── HERO ────────────────────────────── */
+    .hero {
+      background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 60%, var(--primary-light) 100%);
+      border-radius: var(--radius); padding: 52px 48px 44px; margin-bottom: 28px;
+      display: flex; align-items: center; gap: 40px; position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: '🦠'; font-size: 240px; position: absolute; right: -20px; top: -40px;
+      opacity: 0.07; line-height: 1;
+    }
+    .hero-text { flex: 1; }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.9);
+      padding: 5px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 500;
+      margin-bottom: 16px;
+    }
+    .hero h1 {
+      font-family: 'Playfair Display', serif; font-size: 2.4rem;
+      color: #fff; line-height: 1.2; margin-bottom: 14px;
+    }
+    .hero p { color: rgba(255,255,255,0.8); font-size: 1.02rem; line-height: 1.6; max-width: 560px; }
+    .hero-cta {
+      margin-top: 24px; display: flex; gap: 12px; flex-wrap: wrap;
+    }
+    .btn-primary {
+      background: var(--accent); color: #fff; border: none; padding: 12px 24px;
+      border-radius: 10px; font-size: 0.95rem; font-weight: 600; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn-primary:hover { background: #d4941a; transform: translateY(-1px); }
+    .btn-outline {
+      background: transparent; color: #fff; border: 2px solid rgba(255,255,255,0.4);
+      padding: 10px 22px; border-radius: 10px; font-size: 0.95rem; font-weight: 500;
+      cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+      text-decoration: none; transition: all 0.2s;
+    }
+    .btn-outline:hover { border-color: #fff; background: rgba(255,255,255,0.1); }
+    .hero-stats {
+      display: flex; gap: 20px; flex-direction: column;
+    }
+    .hero-stat {
+      background: rgba(255,255,255,0.12); border-radius: 12px; padding: 16px 22px;
+      text-align: center; min-width: 130px;
+    }
+    .hero-stat .val { font-size: 1.8rem; font-weight: 700; color: #fff; }
+    .hero-stat .lbl { font-size: 0.75rem; color: rgba(255,255,255,0.7); margin-top: 3px; }
+
+    /* ── GRID CARDS ──────────────────────── */
+    .grid { display: grid; gap: 20px; }
+    .grid-4 { grid-template-columns: repeat(4, 1fr); }
+    .grid-3 { grid-template-columns: repeat(3, 1fr); }
+    .grid-2 { grid-template-columns: repeat(2, 1fr); }
+    @media(max-width:1000px) { .grid-4 { grid-template-columns: repeat(2,1fr); } }
+    @media(max-width:720px) { .grid-4,.grid-3,.grid-2 { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--surface); border-radius: var(--radius);
+      padding: 24px; box-shadow: var(--card-shadow);
+      border: 1px solid rgba(200,221,211,0.5);
+    }
+    .card-title {
+      font-size: 0.78rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.8px; color: var(--text3); margin-bottom: 10px;
+    }
+    .metric-val {
+      font-size: 2.2rem; font-weight: 700; color: var(--primary);
+      line-height: 1; margin-bottom: 5px;
+    }
+    .metric-sub { font-size: 0.83rem; color: var(--text2); }
+
+    .section-header { margin: 32px 0 16px; }
+    .section-header h2 { font-size: 1.3rem; font-weight: 700; color: var(--text); }
+    .section-header p { font-size: 0.88rem; color: var(--text2); margin-top: 4px; }
+
+    /* ── FEATURE IMPORTANCE BAR ───────────── */
+    .feat-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 8px 0; border-bottom: 1px solid var(--border);
+    }
+    .feat-row:last-child { border-bottom: none; }
+    .feat-name { min-width: 180px; font-size: 0.84rem; color: var(--text); font-weight: 500; }
+    .feat-bar-wrap { flex: 1; background: var(--bg2); border-radius: 6px; height: 9px; overflow: hidden; }
+    .feat-bar { height: 100%; background: linear-gradient(90deg, var(--primary-light), var(--accent)); border-radius: 6px; }
+    .feat-pct { min-width: 44px; text-align: right; font-size: 0.82rem; color: var(--text2); font-family: 'DM Mono', monospace; }
+
+    /* ── CONFUSION MATRIX ─────────────────── */
+    .cm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; max-width: 240px; }
+    .cm-cell {
+      border-radius: 8px; padding: 16px 8px; text-align: center;
+      font-size: 1.5rem; font-weight: 700;
+    }
+    .cm-tp { background: #c8f0de; color: #1a6b4a; }
+    .cm-tn { background: #c8f0de; color: #1a6b4a; }
+    .cm-fp { background: #fdecea; color: #c0392b; }
+    .cm-fn { background: #fef3cd; color: #856404; }
+    .cm-label { font-size: 0.72rem; color: var(--text3); margin-top: 3px; }
+
+    /* ── CLASSIFICATION REPORT TABLE ─────── */
+    .cr-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+    .cr-table th { text-align: left; padding: 10px 12px; font-weight: 600; color: var(--text3); font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid var(--border); }
+    .cr-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+    .cr-table tr:hover td { background: var(--bg); }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.76rem; font-weight: 600; }
+    .badge-green { background: #c8f0de; color: #1a6b4a; }
+    .badge-blue { background: #d0e8ff; color: #1565c0; }
+
+    /* ── INFO CARDS ───────────────────────── */
+    .info-card { border-radius: var(--radius); padding: 20px; margin-bottom: 14px; border-left: 4px solid; }
+    .info-green { background: #f0faf5; border-color: var(--primary); }
+    .info-amber { background: #fef9ec; border-color: var(--accent); }
+    .info-red { background: #fef0ef; border-color: var(--danger); }
+    .info-card h4 { font-size: 0.92rem; font-weight: 600; margin-bottom: 5px; }
+    .info-card p { font-size: 0.85rem; color: var(--text2); line-height: 1.55; }
+
+    /* ── LOADING SPINNER ──────────────────── */
+    .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── SCROLLBAR ────────────────────────── */
+    ::-webkit-scrollbar { width: 7px; }
+    ::-webkit-scrollbar-track { background: var(--bg2); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">Scrub<span>Dx</span> AI</div>
+  <div class="nav-links">
+    <a class="nav-link active" href="#" onclick="showPage('home',this)">
+      <span class="material-icons-round">dashboard</span> Dashboard
+    </a>
+    <a class="nav-link" href="#" onclick="showPage('predict',this)">
+      <span class="material-icons-round">biotech</span> Predict
+    </a>
+    <a class="nav-link" href="#" onclick="showPage('analytics',this)">
+      <span class="material-icons-round">analytics</span> Analytics
+    </a>
+    <a class="nav-link" href="#" onclick="showPage('about',this)">
+      <span class="material-icons-round">info</span> About
+    </a>
+  </div>
+</nav>
+
+<main>
+<div class="container">
+
+<!-- ═══════════════════════════════════════════════ PAGE: HOME ═══════ -->
+<div id="page-home" class="page active">
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-text">
+      <div class="hero-badge"><span class="material-icons-round" style="font-size:14px">verified</span> Clinically-Informed AI · v1.0</div>
+      <h1>Scrub Typhus<br/>Prediction System</h1>
+      <p>AI-powered clinical decision support for <em>Orientia tsutsugamushi</em> detection. Trained on 20,000 synthetic cases grounded in published Indian sub-Himalayan cohort data.</p>
+      <div class="hero-cta">
+        <a href="#" class="btn-primary" onclick="showPage('predict',document.querySelectorAll('.nav-link')[1])">
+          <span class="material-icons-round">play_arrow</span> Start Prediction
+        </a>
+        <a href="#" class="btn-outline" onclick="showPage('about',document.querySelectorAll('.nav-link')[3])">
+          <span class="material-icons-round">description</span> Learn More
+        </a>
+      </div>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="val">89.7%</div><div class="lbl">Accuracy</div>
+      </div>
+      <div class="hero-stat">
+        <div class="val">0.963</div><div class="lbl">ROC-AUC</div>
+      </div>
+      <div class="hero-stat">
+        <div class="val">37</div><div class="lbl">Features</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Stats -->
+  <div class="grid grid-4" style="margin-bottom:24px" id="quick-stats">
+    <div class="card"><div class="card-title">Model Accuracy</div><div class="metric-val">89.7%</div><div class="metric-sub">On 4,000 held-out test samples</div></div>
+    <div class="card"><div class="card-title">ROC-AUC Score</div><div class="metric-val">0.963</div><div class="metric-sub">CV: 0.965 ± 0.003</div></div>
+    <div class="card"><div class="card-title">F1 Score</div><div class="metric-val">0.906</div><div class="metric-sub">Weighted avg (pos. class)</div></div>
+    <div class="card"><div class="card-title">Training Set</div><div class="metric-val">20K</div><div class="metric-sub">Clinically-grounded synthetic data</div></div>
+  </div>
+
+  <div class="grid grid-2" style="margin-bottom:24px">
+    <!-- Classification Report -->
+    <div class="card">
+      <div class="card-title">Classification Report</div>
+      <table class="cr-table" style="margin-top:12px">
+        <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th><th>Support</th></tr>
+        <tr>
+          <td><span class="badge badge-blue">No Scrub Typhus</span></td>
+          <td>0.85</td><td>0.90</td><td>0.87</td><td>1,558</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-green">Scrub Typhus</span></td>
+          <td>0.93</td><td>0.90</td><td>0.91</td><td>2,442</td>
+        </tr>
+        <tr style="font-weight:600">
+          <td>Weighted Avg</td><td>0.90</td><td>0.90</td><td>0.90</td><td>4,000</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Confusion Matrix -->
+    <div class="card">
+      <div class="card-title">Confusion Matrix</div>
+      <div style="display:flex;gap:32px;align-items:center;margin-top:14px">
+        <div>
+          <div style="font-size:0.75rem;color:var(--text3);margin-bottom:6px;font-weight:600">PREDICTED →</div>
+          <div class="cm-grid">
+            <div class="cm-cell cm-tn"><div>1404</div><div class="cm-label">TN</div></div>
+            <div class="cm-cell cm-fp"><div>154</div><div class="cm-label">FP</div></div>
+            <div class="cm-cell cm-fn"><div>258</div><div class="cm-label">FN</div></div>
+            <div class="cm-cell cm-tp"><div>2184</div><div class="cm-label">TP</div></div>
+          </div>
+        </div>
+        <div style="font-size:0.83rem;color:var(--text2);line-height:1.7">
+          <div>✅ True Negative: <b>1,404</b></div>
+          <div>✅ True Positive: <b>2,184</b></div>
+          <div>⚠️ False Positive: <b>154</b></div>
+          <div>⚠️ False Negative: <b>258</b></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feature Importance -->
+  <div class="card" style="margin-bottom:24px">
+    <div class="card-title">Top Feature Importances (Random Forest)</div>
+    <p style="font-size:0.82rem;color:var(--text2);margin:6px 0 16px">Ranking of predictive features by Gini impurity reduction across 300 trees</p>
+    <div id="feat-imp-list">
+      <!-- JS populated -->
+    </div>
+  </div>
+
+  <!-- Charts Row -->
+  <div class="grid grid-3">
+    <div class="card">
+      <div class="card-title">Model Performance</div>
+      <canvas id="perfChart" height="200"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Dataset Class Distribution</div>
+      <canvas id="classChart" height="200"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Feature Category Breakdown</div>
+      <canvas id="featCatChart" height="200"></canvas>
+    </div>
+  </div>
+
+</div><!-- /home -->
+
+
+<!-- ═══════════════════════════════════════════════ PAGE: PREDICT ═══ -->
+<div id="page-predict" class="page">
+
+  <div class="section-header">
+    <h2>Patient Prediction</h2>
+    <p>Enter clinical parameters to receive AI-powered Scrub Typhus risk assessment with XAI explanation</p>
+  </div>
+
+  <div class="grid grid-2">
+    <!-- FORM -->
+    <div>
+      <!-- Demographics -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title" style="margin-bottom:16px">👤 Demographics & Exposure</div>
+        <div class="grid grid-2" style="gap:12px">
+          <div class="field-group">
+            <label class="field-label">Age (years)</label>
+            <input type="number" id="f-age" class="field-input" min="1" max="120" value="35" placeholder="1–120">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Gender</label>
+            <select id="f-gender" class="field-input">
+              <option value="0">Male</option>
+              <option value="1" selected>Female</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Rural Background</label>
+            <select id="f-rural" class="field-input">
+              <option value="1" selected>Yes</option>
+              <option value="0">No</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label">High-Risk Occupation</label>
+            <select id="f-occ" class="field-input">
+              <option value="1" selected>Farmer / Housewife</option>
+              <option value="0">Other</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Outdoor Exposure</label>
+            <select id="f-outdoor" class="field-input">
+              <option value="1" selected>Yes – Fields/Forest</option>
+              <option value="0">No</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Hilly/Sub-Himalayan Region</label>
+            <select id="f-altitude" class="field-input">
+              <option value="1" selected>Yes</option>
+              <option value="0">No</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Environment -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title" style="margin-bottom:16px">🌦 Environmental Factors</div>
+        <div class="grid grid-2" style="gap:12px">
+          <div class="field-group">
+            <label class="field-label">Monsoon Season (Jul–Sep)</label>
+            <select id="f-monsoon" class="field-input">
+              <option value="1" selected>Yes</option>
+              <option value="0">No</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Rainfall (mm)</label>
+            <input type="number" id="f-rain" class="field-input" value="180" placeholder="0–600">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Humidity (%)</label>
+            <input type="number" id="f-humid" class="field-input" value="75" placeholder="0–100">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Temperature (°C)</label>
+            <input type="number" id="f-temp" class="field-input" value="28" step="0.1" placeholder="15–42">
+          </div>
+        </div>
+      </div>
+
+      <!-- Clinical -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title" style="margin-bottom:16px">🤒 Clinical Symptoms</div>
+        <div class="grid grid-2" style="gap:12px">
+          <div class="field-group">
+            <label class="field-label">Fever Duration (days)</label>
+            <input type="number" id="f-feverdays" class="field-input" value="8" min="1" max="30">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Max Fever Temp (°C)</label>
+            <input type="number" id="f-fevertemp" class="field-input" value="39.2" step="0.1" min="37.5" max="42.5">
+          </div>
+        </div>
+        <div class="grid grid-3" style="gap:10px;margin-top:12px">
+          <label class="toggle-label"><input type="checkbox" id="c-headache" checked> Headache</label>
+          <label class="toggle-label"><input type="checkbox" id="c-myalgia" checked> Myalgia</label>
+          <label class="toggle-label"><input type="checkbox" id="c-cough"> Cough</label>
+          <label class="toggle-label"><input type="checkbox" id="c-nausea" checked> Nausea/Vomiting</label>
+          <label class="toggle-label"><input type="checkbox" id="c-abdo" checked> Abdominal Pain</label>
+          <label class="toggle-label"><input type="checkbox" id="c-breath"> Breathlessness</label>
+          <label class="toggle-label"><input type="checkbox" id="c-chills" checked> Chills/Rigors</label>
+          <label class="toggle-label"><input type="checkbox" id="c-sensorium"> Altered Sensorium</label>
+          <label class="toggle-label"><input type="checkbox" id="c-jaundice"> Jaundice</label>
+          <label class="toggle-label"><input type="checkbox" id="c-lymph"> Lymphadenopathy</label>
+          <label class="toggle-label"><input type="checkbox" id="c-rash"> Rash</label>
+          <label class="toggle-label"><input type="checkbox" id="c-eschar" checked> <b>Eschar ⭐</b></label>
+          <label class="toggle-label"><input type="checkbox" id="c-edema" checked> Upper Eyelid Edema</label>
+        </div>
+      </div>
+
+      <!-- Labs -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title" style="margin-bottom:16px">🧪 Laboratory Parameters</div>
+        <div class="grid grid-3" style="gap:12px">
+          <div class="field-group">
+            <label class="field-label">WBC (/μL)</label>
+            <input type="number" id="f-wbc" class="field-input" value="7800">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Platelets (/μL)</label>
+            <input type="number" id="f-plt" class="field-input" value="95000">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Hemoglobin (g/dL)</label>
+            <input type="number" id="f-hgb" class="field-input" value="10.5" step="0.1">
+          </div>
+          <div class="field-group">
+            <label class="field-label">AST/SGOT (U/L)</label>
+            <input type="number" id="f-ast" class="field-input" value="120">
+          </div>
+          <div class="field-group">
+            <label class="field-label">ALT/SGPT (U/L)</label>
+            <input type="number" id="f-alt" class="field-input" value="95">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Blood Urea (mg/dL)</label>
+            <input type="number" id="f-burea" class="field-input" value="55">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Creatinine (mg/dL)</label>
+            <input type="number" id="f-creat" class="field-input" value="1.1" step="0.01">
+          </div>
+          <div class="field-group">
+            <label class="field-label">CRP (mg/L)</label>
+            <input type="number" id="f-crp" class="field-input" value="45">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Sodium (mEq/L)</label>
+            <input type="number" id="f-sodium" class="field-input" value="134">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Bilirubin (mg/dL)</label>
+            <input type="number" id="f-bili" class="field-input" value="0.9" step="0.01">
+          </div>
+          <div class="field-group">
+            <label class="field-label">IgM ELISA</label>
+            <select id="f-elisa" class="field-input">
+              <option value="1" selected>Positive</option>
+              <option value="0">Negative / Not done</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Weil-Felix</label>
+            <select id="f-wf" class="field-input">
+              <option value="0" selected>Negative</option>
+              <option value="1">Positive</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <button id="predict-btn" onclick="runPrediction()" style="width:100%;padding:16px;background:var(--primary);color:#fff;border:none;border-radius:12px;font-size:1rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all 0.2s">
+        <span class="material-icons-round">psychology</span> Run AI Prediction
+      </button>
+    </div>
+
+    <!-- RESULTS -->
+    <div id="result-panel">
+      <div class="card" style="margin-bottom:16px;text-align:center;padding:48px 24px;color:var(--text3)">
+        <span class="material-icons-round" style="font-size:52px;opacity:0.3">biotech</span>
+        <p style="margin-top:12px;font-size:0.9rem">Fill in the patient parameters and click <br/><b>Run AI Prediction</b> to see results</p>
+      </div>
+    </div>
+  </div>
+</div><!-- /predict -->
+
+
+<!-- ═══════════════════════════════════════════════ PAGE: ANALYTICS ══ -->
+<div id="page-analytics" class="page">
+  <div class="section-header">
+    <h2>Dataset Analytics</h2>
+    <p>Exploratory analysis of the 20,000-case training dataset</p>
+  </div>
+  <div class="grid grid-4" style="margin-bottom:24px" id="analytics-stats">
+    <div class="card"><div class="card-title">Total Records</div><div class="metric-val">20,000</div><div class="metric-sub">Synthetic clinical cases</div></div>
+    <div class="card"><div class="card-title">Positive Cases</div><div class="metric-val">12,211</div><div class="metric-sub">61.1% prevalence</div></div>
+    <div class="card"><div class="card-title">Eschar Prevalence</div><div class="metric-val">18.3%</div><div class="metric-sub">Per Indian cohort literature</div></div>
+    <div class="card"><div class="card-title">Monsoon Risk</div><div class="metric-val">76.8%</div><div class="metric-sub">Cases in Jul–Sep</div></div>
+  </div>
+  <div class="grid grid-2" style="margin-bottom:24px">
+    <div class="card">
+      <div class="card-title">Symptom Frequency in Positive Cases</div>
+      <canvas id="symptomChart" height="250"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Lab Abnormality Distribution</div>
+      <canvas id="labChart" height="250"></canvas>
+    </div>
+  </div>
+  <div class="grid grid-2">
+    <div class="card">
+      <div class="card-title">Age Distribution by Outcome</div>
+      <canvas id="ageChart" height="220"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Seasonal Pattern (Relative Risk)</div>
+      <canvas id="seasonChart" height="220"></canvas>
+    </div>
+  </div>
+</div><!-- /analytics -->
+
+
+<!-- ═══════════════════════════════════════════════ PAGE: ABOUT ═══════ -->
+<div id="page-about" class="page">
+  <div class="section-header">
+    <h2>About ScrubDx AI</h2>
+    <p>System architecture, clinical basis, and development methodology</p>
+  </div>
+
+  <div class="grid grid-2" style="margin-bottom:24px">
+    <div class="card">
+      <div class="card-title">🦠 What is Scrub Typhus?</div>
+      <p style="font-size:0.88rem;color:var(--text2);line-height:1.7;margin-top:10px">
+        Scrub typhus is an acute zoonotic febrile illness caused by <em>Orientia tsutsugamushi</em>, 
+        transmitted by infected chigger mite larvae. It is the most common rickettsial infection 
+        in the Indian subcontinent, with epidemics reported across sub-Himalayan states including 
+        Uttarakhand, Himachal Pradesh, and the northeast.
+      </p>
+      <p style="font-size:0.88rem;color:var(--text2);line-height:1.7;margin-top:10px">
+        Untreated mortality can reach 70%. With early doxycycline treatment, prognosis is excellent. 
+        The <strong>pathognomonic eschar</strong> (black scab at bite site) is present in only 13–18% 
+        of Indian patients, making clinical diagnosis challenging.
+      </p>
+    </div>
+    <div class="card">
+      <div class="card-title">🏗 System Architecture</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--text);background:var(--bg);border-radius:8px;padding:16px;margin-top:10px;line-height:2">
+        [Clinician / Browser]<br/>
+        &nbsp;&nbsp;&nbsp;↓ HTTP POST /api/predict<br/>
+        [FastAPI Backend (Python)]<br/>
+        &nbsp;&nbsp;&nbsp;↓ Pydantic v2 Validation<br/>
+        [RandomForest Pipeline (sklearn)]<br/>
+        &nbsp;&nbsp;&nbsp;↓ StandardScaler → RF(300 trees)<br/>
+        [XAI Engine (Feature Importance)]<br/>
+        &nbsp;&nbsp;&nbsp;↓ Prediction + SHAP-equivalent<br/>
+        [Treatment Recommendation Engine]<br/>
+        &nbsp;&nbsp;&nbsp;↓ JSON Response<br/>
+        [4-Page Material-UI Frontend]
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-3" style="margin-bottom:24px">
+    <div class="card">
+      <div class="card-title">📊 Data Sources</div>
+      <ul style="font-size:0.85rem;color:var(--text2);line-height:2;margin-top:10px;list-style:none">
+        <li>📄 Pathania et al. 2019 (Uttarakhand, n=54)</li>
+        <li>📄 Scrub Typhus Dataset 17-March (n=2501 records)</li>
+        <li>📄 S7 Appendix Full Dataset (n=268 studies)</li>
+        <li>📄 Huang et al. 2025 (Ganzhou, BPNN model)</li>
+        <li>📄 WHO/IDSA Treatment Guidelines 2023</li>
+        <li>🔬 20K synthetic cases derived from above</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-title">⚙️ Tech Stack</div>
+      <ul style="font-size:0.85rem;color:var(--text2);line-height:2.1;margin-top:10px;list-style:none">
+        <li>🐍 Python 3.12 · FastAPI 0.110+</li>
+        <li>✅ Pydantic v2 (strict clinical validators)</li>
+        <li>🌲 scikit-learn RandomForestClassifier</li>
+        <li>📦 ML Pipeline (StandardScaler + RF)</li>
+        <li>📊 XAI via Gini Feature Importance</li>
+        <li>🌐 Vanilla JS + Chart.js frontend</li>
+        <li>🐳 Docker-ready deployment</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-title">📈 Model Performance</div>
+      <ul style="font-size:0.85rem;color:var(--text2);line-height:2.1;margin-top:10px;list-style:none">
+        <li>✅ Accuracy: <b>89.65%</b></li>
+        <li>✅ ROC-AUC: <b>0.9634</b></li>
+        <li>✅ CV ROC-AUC: <b>0.965 ± 0.003</b></li>
+        <li>✅ F1 (Scrub Typhus): <b>0.91</b></li>
+        <li>✅ Recall (Scrub Typhus): <b>0.90</b></li>
+        <li>✅ Precision (Scrub Typhus): <b>0.93</b></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="info-card info-amber">
+    <h4>⚠️ Clinical Disclaimer</h4>
+    <p>This AI system is intended for <strong>clinical decision support only</strong>. It does not replace physician judgment. Diagnosis should be confirmed by IgM ELISA serology (InBios or equivalent). In endemic areas with high clinical suspicion, empirical doxycycline therapy should be initiated without waiting for laboratory confirmation, as early treatment dramatically reduces mortality.</p>
+  </div>
+
+  <div class="info-card info-green" style="margin-top:14px">
+    <h4>💊 Treatment Summary (WHO-Endorsed)</h4>
+    <p><strong>First-line:</strong> Doxycycline 100 mg twice daily × 5–7 days (uncomplicated), × 10–14 days (complicated). <strong>Pregnancy / intolerance:</strong> Azithromycin 500 mg once daily × 5 days. <strong>Severe disease:</strong> IV Azithromycin + ICU supportive care. Early treatment is the single most important factor in reducing complications and mortality.</p>
+  </div>
+</div><!-- /about -->
+
+</div><!-- /container -->
+</main>
+
+<style>
+  .field-group { display: flex; flex-direction: column; gap: 5px; }
+  .field-label { font-size: 0.78rem; font-weight: 600; color: var(--text2); }
+  .field-input {
+    border: 1.5px solid var(--border); border-radius: 8px; padding: 9px 12px;
+    font-size: 0.9rem; color: var(--text); background: var(--surface);
+    font-family: 'DM Sans', sans-serif; transition: border-color 0.2s; outline: none;
+  }
+  .field-input:focus { border-color: var(--primary); }
+  .toggle-label {
+    display: flex; align-items: center; gap: 7px; font-size: 0.83rem;
+    cursor: pointer; padding: 6px 10px; border-radius: 8px;
+    background: var(--bg); border: 1px solid var(--border);
+    transition: all 0.15s;
+  }
+  .toggle-label:hover { background: var(--bg2); border-color: var(--primary); }
+  .toggle-label input { accent-color: var(--primary); width: 14px; height: 14px; }
+
+  /* Result card styles */
+  .result-card {
+    background: var(--surface); border-radius: var(--radius);
+    padding: 24px; box-shadow: var(--card-shadow);
+    border: 1px solid rgba(200,221,211,0.5); margin-bottom: 16px;
+  }
+  .risk-positive {
+    background: linear-gradient(135deg, #fff5f5, #ffe8e8);
+    border: 2px solid var(--danger);
+  }
+  .risk-negative {
+    background: linear-gradient(135deg, #f0faf5, #e0f5ea);
+    border: 2px solid var(--primary);
+  }
+  .risk-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 16px; border-radius: 20px; font-weight: 700; font-size: 0.85rem;
+    margin-bottom: 12px;
+  }
+  .badge-positive { background: #d63031; color: #fff; }
+  .badge-negative { background: var(--primary); color: #fff; }
+  .badge-low { background: #27ae60; color: #fff; }
+  .badge-moderate { background: var(--warning); color: #fff; }
+  .badge-high { background: #e67e22; color: #fff; }
+  .badge-critical { background: var(--danger); color: #fff; }
+
+  .prob-display {
+    font-size: 3rem; font-weight: 700; line-height: 1;
+  }
+  .gauge-wrap { position: relative; width: 120px; height: 60px; overflow: hidden; margin: 0 auto; }
+  .gauge-bg { width: 120px; height: 120px; border-radius: 50%; position: absolute; top: 0; clip: rect(0,120px,60px,0); }
+
+  .treatment-item {
+    padding: 12px 14px; border-radius: 10px; margin-bottom: 8px;
+    border-left: 4px solid;
+  }
+  .treat-primary { background: #f0faf5; border-color: var(--primary); }
+  .treat-alternative { background: #fef9ec; border-color: var(--accent); }
+  .treat-critical { background: #fef0ef; border-color: var(--danger); }
+  .treat-supportive { background: #f0f4ff; border-color: #5c6bc0; }
+  .treat-drug { font-weight: 700; font-size: 0.92rem; }
+  .treat-detail { font-size: 0.82rem; color: var(--text2); margin-top: 3px; }
+
+  .feat-contrib {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 0; border-bottom: 1px solid var(--border);
+  }
+  .feat-contrib:last-child { border-bottom: none; }
+  .contrib-name { min-width: 170px; font-size: 0.83rem; font-weight: 500; }
+  .contrib-val { font-size: 0.78rem; color: var(--text2); font-family: 'DM Mono', monospace; min-width: 70px; }
+  .contrib-bar-wrap { flex: 1; height: 8px; background: var(--bg2); border-radius: 4px; overflow: hidden; }
+  .contrib-bar { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--primary-light), var(--accent)); }
+</style>
+
+<script>
+const API_BASE = "http://127.0.0.1:8000";
+
+// ─── Navigation ──────────────────────────────────────────────────────────────
+function showPage(pageId, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  document.getElementById('page-' + pageId).classList.add('active');
+  if (el) el.classList.add('active');
+}
+
+// ─── Feature Importance List ─────────────────────────────────────────────────
+const FEAT_IMP = {
+  "Eschar": 0.1523, "Fever Days": 0.0891, "Platelet Count": 0.0812,
+  "Ast": 0.0734, "Blood Urea": 0.0689, "Crp": 0.0621,
+  "Outdoor Exposure": 0.0542, "Monsoon Season": 0.0498, "Alt": 0.0467,
+  "Myalgia": 0.0423, "Upper Eyelid Edema": 0.0398, "Rash": 0.0367,
+};
+const maxImp = Math.max(...Object.values(FEAT_IMP));
+const featList = document.getElementById('feat-imp-list');
+Object.entries(FEAT_IMP).forEach(([k, v]) => {
+  const pct = Math.round(v / maxImp * 100);
+  featList.innerHTML += `
+    <div class="feat-row">
+      <div class="feat-name">${k}</div>
+      <div class="feat-bar-wrap"><div class="feat-bar" style="width:${pct}%"></div></div>
+      <div class="feat-pct">${(v*100).toFixed(1)}%</div>
+    </div>`;
+});
+
+// ─── Charts ──────────────────────────────────────────────────────────────────
+const C = {
+  green: '#1a6b4a', light: '#2d9669', accent: '#e8a317',
+  red: '#d63031', bg: '#f0f4f1', border: '#c8ddd3',
+  text: '#1a2e22', text2: '#4a6358',
+};
+
+// Perf radar
+new Chart(document.getElementById('perfChart'), {
+  type: 'radar',
+  data: {
+    labels: ['Accuracy', 'ROC-AUC', 'Precision', 'Recall', 'F1'],
+    datasets: [{
+      label: 'Model', data: [89.65, 96.34, 93, 90, 91],
+      backgroundColor: 'rgba(26,107,74,0.15)', borderColor: C.green,
+      borderWidth: 2, pointBackgroundColor: C.green, pointRadius: 4,
+    }]
+  },
+  options: { scales: { r: { min: 80, max: 100, ticks: { font: { size: 10 } } } }, plugins: { legend: { display: false } } }
+});
+
+// Class dist
+new Chart(document.getElementById('classChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Scrub Typhus (61%)', 'Negative (39%)'],
+    datasets: [{ data: [12211, 7789], backgroundColor: [C.green, C.bg], borderColor: [C.green, C.border], borderWidth: 2 }]
+  },
+  options: { plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
+});
+
+// Feature categories
+new Chart(document.getElementById('featCatChart'), {
+  type: 'pie',
+  data: {
+    labels: ['Clinical (37%)', 'Lab (28%)', 'Environmental (18%)', 'Demographic (17%)'],
+    datasets: [{ data: [37, 28, 18, 17], backgroundColor: [C.green, C.accent, C.light, '#7fb3a2'], borderWidth: 1 }]
+  },
+  options: { plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
+});
+
+// Analytics charts
+new Chart(document.getElementById('symptomChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Fever','Headache','Myalgia','Chills','Nausea','Cough','Abdo Pain','Rash','Eschar','Eyelid Edema'],
+    datasets: [{
+      label: '% Positive Cases', data: [100, 83, 74, 65, 54, 52, 72, 31, 18, 74],
+      backgroundColor: C.green, borderRadius: 6,
+    }]
+  },
+  options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { max: 110, ticks: { callback: v => v+'%' } } } }
+});
+
+new Chart(document.getElementById('labChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Elevated BUN', 'Raised AST', 'Raised ALT', 'Thrombocytopenia', 'Leucocytosis', 'Elevated CRP', 'Raised Creatinine'],
+    datasets: [{
+      label: '% Positive Cases', data: [87, 74, 72, 13, 30, 78, 12],
+      backgroundColor: C.accent, borderRadius: 6,
+    }]
+  },
+  options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { max: 100, ticks: { callback: v => v+'%' } } } }
+});
+
+new Chart(document.getElementById('ageChart'), {
+  type: 'bar',
+  data: {
+    labels: ['<20','20-30','30-40','40-50','50-60','>60'],
+    datasets: [
+      { label: 'Positive', data: [8, 28, 36, 18, 7, 3], backgroundColor: C.green, borderRadius: 4 },
+      { label: 'Negative', data: [13, 22, 31, 21, 9, 4], backgroundColor: C.border, borderRadius: 4 },
+    ]
+  },
+  options: { plugins: { legend: { position: 'top' } }, scales: { x: {}, y: { title: { display: true, text: '% of group' } } } }
+});
+
+new Chart(document.getElementById('seasonChart'), {
+  type: 'line',
+  data: {
+    labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+    datasets: [{
+      label: 'Relative Risk', data: [0.5,0.4,0.5,0.6,0.8,1.2,2.4,2.8,2.6,1.8,0.9,0.6],
+      borderColor: C.green, backgroundColor: 'rgba(26,107,74,0.12)',
+      fill: true, tension: 0.4, borderWidth: 2.5, pointBackgroundColor: C.green,
+    }]
+  },
+  options: { plugins: { legend: { display: false } }, scales: { y: { title: { display: true, text: 'Relative Risk Score' } } } }
+});
+
+// ─── Prediction ───────────────────────────────────────────────────────────────
+async function runPrediction() {
+  const btn = document.getElementById('predict-btn');
+  btn.innerHTML = '<span class="spinner"></span> Analyzing...';
+  btn.disabled = true;
+
+  const payload = {
+    age: +document.getElementById('f-age').value,
+    gender: +document.getElementById('f-gender').value,
+    rural_background: +document.getElementById('f-rural').value,
+    occupation_risk: +document.getElementById('f-occ').value,
+    monsoon_season: +document.getElementById('f-monsoon').value,
+    altitude_hills: +document.getElementById('f-altitude').value,
+    rainfall_mm: +document.getElementById('f-rain').value,
+    humidity_pct: +document.getElementById('f-humid').value,
+    temp_celsius: +document.getElementById('f-temp').value,
+    outdoor_exposure: +document.getElementById('f-outdoor').value,
+    fever_days: +document.getElementById('f-feverdays').value,
+    fever_temp_c: +document.getElementById('f-fevertemp').value,
+    headache: document.getElementById('c-headache').checked ? 1 : 0,
+    myalgia: document.getElementById('c-myalgia').checked ? 1 : 0,
+    cough: document.getElementById('c-cough').checked ? 1 : 0,
+    nausea_vomiting: document.getElementById('c-nausea').checked ? 1 : 0,
+    abdominal_pain: document.getElementById('c-abdo').checked ? 1 : 0,
+    breathlessness: document.getElementById('c-breath').checked ? 1 : 0,
+    chills: document.getElementById('c-chills').checked ? 1 : 0,
+    altered_sensorium: document.getElementById('c-sensorium').checked ? 1 : 0,
+    jaundice: document.getElementById('c-jaundice').checked ? 1 : 0,
+    lymphadenopathy: document.getElementById('c-lymph').checked ? 1 : 0,
+    rash: document.getElementById('c-rash').checked ? 1 : 0,
+    eschar: document.getElementById('c-eschar').checked ? 1 : 0,
+    upper_eyelid_edema: document.getElementById('c-edema').checked ? 1 : 0,
+    wbc_count: +document.getElementById('f-wbc').value,
+    platelet_count: +document.getElementById('f-plt').value,
+    hemoglobin: +document.getElementById('f-hgb').value,
+    ast: +document.getElementById('f-ast').value,
+    alt: +document.getElementById('f-alt').value,
+    blood_urea: +document.getElementById('f-burea').value,
+    serum_creatinine: +document.getElementById('f-creat').value,
+    crp: +document.getElementById('f-crp').value,
+    sodium: +document.getElementById('f-sodium').value,
+    bilirubin: +document.getElementById('f-bili').value,
+    elisa_igm: +document.getElementById('f-elisa').value,
+    weil_felix: +document.getElementById('f-wf').value,
+  };
+
+  try {
+    const res = await fetch(`${API_BASE}/api/predict`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'API error');
+    }
+    const data = await res.json();
+    renderResult(data);
+  } catch (e) {
+    // Simulate for demo when API is not running
+    renderDemoResult(payload);
+  } finally {
+    btn.innerHTML = '<span class="material-icons-round">psychology</span> Run AI Prediction';
+    btn.disabled = false;
+  }
+}
+
+function getRiskBadgeClass(risk) {
+  const m = { LOW:'badge-low', MODERATE:'badge-moderate', HIGH:'badge-high', CRITICAL:'badge-critical' };
+  return m[risk] || 'badge-low';
+}
+
+function renderResult(data) {
+  const pos = data.prediction === 1;
+  const probPct = Math.round(data.probability_positive * 100);
+
+  let html = `
+    <div class="result-card ${pos ? 'risk-positive' : 'risk-negative'}">
+      <div class="risk-badge ${pos ? 'badge-positive' : 'badge-negative'}">
+        <span class="material-icons-round" style="font-size:16px">${pos ? 'warning' : 'check_circle'}</span>
+        ${data.diagnosis}
+      </div>
+      <div style="display:flex;align-items:center;gap:24px;margin:12px 0">
+        <div>
+          <div class="prob-display" style="color:${pos ? '#d63031' : '#1a6b4a'}">${probPct}%</div>
+          <div style="font-size:0.8rem;color:var(--text2)">Probability of Scrub Typhus</div>
+        </div>
+        <div>
+          <span class="risk-badge ${getRiskBadgeClass(data.risk_level)}">${data.risk_level} RISK</span>
+          <div style="font-size:0.78rem;color:var(--text2);margin-top:6px">Confidence: ${data.model_confidence}</div>
+        </div>
+      </div>
+      <p style="font-size:0.85rem;color:var(--text2);line-height:1.6;padding:10px 14px;background:rgba(0,0,0,0.04);border-radius:8px">
+        ${data.clinical_summary}
+      </p>
+    </div>`;
+
+  // Treatment
+  if (data.treatment_recommendations.length) {
+    html += `<div class="result-card">
+      <div class="card-title" style="margin-bottom:12px">💊 Treatment Recommendations</div>`;
+    data.treatment_recommendations.forEach(t => {
+      const cls = { PRIMARY:'treat-primary', ALTERNATIVE:'treat-alternative', CRITICAL:'treat-critical', SUPPORTIVE:'treat-supportive' }[t.priority] || 'treat-primary';
+      html += `<div class="treatment-item ${cls}">
+        <div class="treat-drug">${t.drug} <span style="font-size:0.72rem;padding:2px 8px;border-radius:8px;background:rgba(0,0,0,0.07)">${t.priority}</span></div>
+        <div class="treat-detail">${t.dose} | ${t.route} | Duration: ${t.duration}</div>
+        <div class="treat-detail" style="margin-top:3px;font-style:italic">${t.indication}</div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  // Complications
+  html += `<div class="result-card">
+    <div class="card-title" style="margin-bottom:12px">⚠️ Complications to Monitor</div>
+    <ul style="list-style:none;font-size:0.85rem;color:var(--text2);line-height:2.1">
+      ${data.complications_to_watch.map(c => `<li>${c}</li>`).join('')}
+    </ul>
+  </div>`;
+
+  // XAI
+  html += `<div class="result-card">
+    <div class="card-title" style="margin-bottom:12px">🔍 XAI – Feature Contributions</div>
+    <p style="font-size:0.8rem;color:var(--text3);margin-bottom:12px">Top 12 features by model importance (Gini impurity reduction)</p>`;
+  const maxImp2 = Math.max(...data.top_features.map(f => f.importance));
+  data.top_features.forEach(f => {
+    const pct = Math.round(f.importance / maxImp2 * 100);
+    html += `<div class="feat-contrib">
+      <div class="contrib-name">${f.feature}</div>
+      <div class="contrib-val">= ${f.value}</div>
+      <div class="contrib-bar-wrap"><div class="contrib-bar" style="width:${pct}%"></div></div>
+      <div style="font-size:0.72rem;color:var(--text3);min-width:38px;text-align:right">${(f.importance*100).toFixed(1)}%</div>
+    </div>`;
+  });
+  html += `</div>`;
+
+  // Disclaimer
+  html += `<div style="font-size:0.75rem;color:var(--text3);padding:10px 14px;background:var(--bg2);border-radius:8px;line-height:1.5">
+    ⚕️ ${data.disclaimer}
+  </div>`;
+
+  document.getElementById('result-panel').innerHTML = html;
+}
+
+function renderDemoResult(payload) {
+  // Offline demo mode
+  const eschar = payload.eschar;
+  const feverDays = payload.fever_days;
+  const platelet = payload.platelet_count;
+  let prob = 0.30 + eschar * 0.25 + (feverDays > 5 ? 0.15 : 0) + (platelet < 120000 ? 0.12 : 0) + (payload.ast > 80 ? 0.08 : 0);
+  prob = Math.min(0.95, prob + Math.random() * 0.05);
+  const prediction = prob >= 0.5 ? 1 : 0;
+  const risk = prob < 0.25 ? 'LOW' : prob < 0.5 ? 'MODERATE' : prob < 0.75 ? 'HIGH' : 'CRITICAL';
+
+  const demoData = {
+    prediction,
+    diagnosis: prediction ? 'Scrub Typhus – Positive' : 'Scrub Typhus – Negative',
+    probability_positive: prob,
+    risk_level: risk,
+    model_confidence: 'Demo Mode (API offline)',
+    clinical_summary: prediction
+      ? `High index of suspicion for Scrub Typhus. Probability: ${Math.round(prob*100)}%. Risk: ${risk}. Initiate empirical doxycycline therapy.`
+      : `Low probability (${Math.round(prob*100)}%). Consider alternative diagnoses. Re-evaluate if fever persists.`,
+    treatment_recommendations: prediction ? [
+      { drug: 'Doxycycline', dose: '100 mg twice daily', route: 'Oral', duration: '5–7 days', indication: 'First-line treatment (WHO)', priority: 'PRIMARY' },
+      { drug: 'Azithromycin', dose: '500 mg once daily', route: 'Oral/IV', duration: '5 days', indication: 'Alternative/pregnancy', priority: 'ALTERNATIVE' },
+    ] : [],
+    complications_to_watch: prediction ? [
+      platelet < 100000 ? '⚠️ Thrombocytopenia – Monitor CBC daily' : '✅ Platelet count acceptable',
+      payload.ast > 120 ? '⚠️ Hepatitis – Monitor LFTs' : '✅ Liver enzymes near normal',
+      payload.altered_sensorium ? '⚠️ CNS involvement – Neurology consult' : '✅ No neurological signs',
+    ] : ['✅ Low risk. Monitor for 48h if fever persists.'],
+    top_features: [
+      { feature: 'Eschar', importance: 0.152, value: eschar, clinical_note: 'Pathognomonic bite-site lesion' },
+      { feature: 'Fever Days', importance: 0.089, value: feverDays, clinical_note: 'Duration of febrile illness' },
+      { feature: 'Platelet Count', importance: 0.081, value: platelet, clinical_note: 'Thrombocytopenia marker' },
+      { feature: 'Ast', importance: 0.073, value: payload.ast, clinical_note: 'Liver enzyme elevation' },
+      { feature: 'Blood Urea', importance: 0.069, value: payload.blood_urea, clinical_note: 'Renal function marker' },
+      { feature: 'Crp', importance: 0.062, value: payload.crp, clinical_note: 'Systemic inflammation' },
+    ],
+    disclaimer: 'DEMO MODE – API server not running. Start FastAPI with: uvicorn backend.api:app --reload. This tool is for clinical decision support only.',
+  };
+  renderResult(demoData);
+}
+</script>
+
+</body>
+</html>
